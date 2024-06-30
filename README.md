@@ -1,34 +1,31 @@
-## Usage
+## What is this?
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+This is a project inspired in [Remotion](https://github.com/remotion-dev/remotion#), but entirely rewritten in SolidJS.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+## Why create videos in ~~React~~ SolidJS?
 
-```bash
-$ npm install # or pnpm install or yarn install
+- **Leverage web technologies**: Use all of CSS, Canvas, SVG, WebGL, etc.
+- **Leverage programming**: Use variables, functions, APIs, math and algorithms to create new effects
+- **Leverage ~~React~~ SolidJS**: Reusable components, Powerful composition, Fast Refresh, Package ecosystem
+
+## How to get started
+
+- Clone this repo
+- `pnpm install`
+- KEEP READING!
+
+This project relies on [Puppeteer ](https://pptr.dev/) to generate screenshots of your composition, and [ffmpeg](https://www.ffmpeg.org/) to create a video from these screenshots. Using Puppeteer just for taking screenshots might be an overkill which I will probably address in the future.
+
+To install `ffmpeg` on Ubuntu or other Debian-based distro (I did it in WSL):
+- `sudo apt update && sudo apt install ffmpeg`
+
+Next, Puppeteer needs a browser to connect to during the rendering. This project depends on `puppeteer-core`, which does not include the browser binaries. Make sure you have a dev-compatible browser installed on your environment. I've used Chrome for WSL. You can find the instructions on how to install Chrome in Linux [here](https://learn.microsoft.com/en-us/windows/wsl/tutorials/gui-apps#install-google-chrome-for-linux).
+
+Finally, start having fun! You can find some examples in the `examples` directory.
+
+To render a composition:
+
+```console
+pnpm run render
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm run dev` or `npm start`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.<br>
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
-It correctly bundles Solid in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br>
-Your app is ready to be deployed!
-
-## Deployment
-
-You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)
