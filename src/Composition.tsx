@@ -1,20 +1,6 @@
 import { SceneProps } from "./Scene"
 import type { Viewport } from "./types"
-import { type Accessor, createContext, createSignal, type ParentProps, useContext, JSX, onMount, createEffect, createMemo } from "solid-js"
-
-type Props = ParentProps<{
-    id?: string
-    fps: number
-    viewport: Viewport
-}>
-
-type CompositionContextType = {
-    getElapsed: Accessor<number>
-    getCurrentFrame: Accessor<number>
-    registerScene: (scene: SceneProps) => void;
-    getCurrentScene: () => number;
-    done: () => void;
-}
+import { type Accessor, createContext, createSignal, type ParentProps, useContext, JSX, onMount, createEffect, createMemo, on } from "solid-js"
 
 declare global {
     var COMPOSITION: {
@@ -22,32 +8,71 @@ declare global {
         viewport: {
             width: number
             height: number
-        }
+        },
+        scenes: number
+        totalFrames: number
+        totalDuration: number
     };
-  }
+}
+
+export type SceneInfo = {
+    id: number
+    start: number
+    end: number
+    duration: number
+}
+
+type CompositionContextType = {
+    getElapsed: Accessor<number>
+    getCurrentFrame: Accessor<number>
+    registerScene: (scene: SceneProps) => SceneInfo;
+    getCurrentScene: () => number;
+    done: () => void;
+}
 
 const CompositionContext = createContext<CompositionContextType>();
 
-export default function Composition(props: Props){
-    globalThis.COMPOSITION = {
-        fps: props.fps,
-        viewport: props.viewport,
+const getFixedFrame = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const frame = urlParams.get('frame');
+    if(frame){
+        return parseInt(frame, 10);
     }
+
+    return null;
+}
+
+type Props = ParentProps<{
+    id?: string
+    fps: number
+    viewport: Viewport
+}>
+
+export default function Composition(props: Props){
     const scenes = [] as SceneProps[];
     let _total_duration = 0;
     const _fps = props.fps;
-    const _fps_ms_wait = 1000.0 / props.fps;
-    console.log(`Refrescando cada ${_fps_ms_wait}ms`)
+    const _frame_duration_ms = 1000.0 / props.fps;
+    console.log(`Refrescando cada ${_frame_duration_ms}ms`);
+    const fixedFrame = getFixedFrame();
+    console.log("Fixed frame: ", fixedFrame)
     let _currentFrame = 0;
     //const [getCurrentFrame, setCurrentFrame] = createSignal(0);
     const [getDone, setDone] = createSignal<boolean>(false);
-    //const [getCurrentScene, setCurrentScene] = createSignal<number>(-1);
-    const [getElapsed, setElapsed] = createSignal<number>(0);
+    const [getSceneCount, setSceneCount] = createSignal<number>(0);
+    const [getElapsed, setElapsed] = createSignal<number>(
+        fixedFrame !== null
+        ? fixedFrame * _frame_duration_ms
+        : 0
+    );
+
+    console.log("Elapsed initialized to: ", getElapsed())
 
     const getCurrentFrame = () => Math.floor(getElapsed() / (1000.0 / props.fps));
 
     const getCurrentScene = createMemo(() => {
         const elapsed = getElapsed();
+        const count = getSceneCount();
         let sceneStart = 0, sceneEnd = 0;
         for(let i = 0; i < scenes.length; i++){
             const scene = scenes[i];
@@ -81,7 +106,7 @@ export default function Composition(props: Props){
         const elapsed = timestamp - start;
         setElapsed(timestamp - start);
 
-        const _curFrame = Math.floor(elapsed / _fps_ms_wait);
+        const _curFrame = Math.floor(elapsed / _frame_duration_ms);
         if(_curFrame !== _currentFrame){
             //render(_curFrame);
             _currentFrame = _curFrame;
@@ -109,12 +134,20 @@ export default function Composition(props: Props){
             done = true;
         },
         registerScene(scene) {
+            const start = scenes.reduce((prev, cur) => prev + cur.duration, 0);
             scenes.push(scene);
+            setSceneCount(scenes.length);
             _total_duration += scene.duration;
-            if(scenes.length === 1){
+            if(scenes.length === 1 && fixedFrame === null){
                 window.requestAnimationFrame(tick);
             }
-            return scenes.length;
+
+            return {
+                id: scenes.length,
+                start,
+                end: start + scene.duration,
+                duration: scene.duration,
+            } as SceneInfo
         },
         getCurrentScene,
     } as CompositionContextType;
@@ -127,6 +160,17 @@ export default function Composition(props: Props){
     createEffect(() => {
         console.log("Current scene: ", getCurrentScene())
     });
+
+    createEffect(on(getSceneCount, () => {
+        const totalDuration = scenes.map(scene => scene.duration).reduce((prev, cur) => prev + cur, 0);
+        globalThis.COMPOSITION = {
+            fps: props.fps,
+            viewport: props.viewport,
+            scenes: getSceneCount(),
+            totalDuration,
+            totalFrames: Math.ceil((totalDuration / 1000.0) * props.fps)
+        }
+    }))
 
     // onMount(() => {
     //     window.requestAnimationFrame(step);

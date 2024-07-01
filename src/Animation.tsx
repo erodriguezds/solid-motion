@@ -1,5 +1,6 @@
 import { Accessor, JSXElement } from "solid-js"
 import { useComposition } from "./Composition";
+import { useParentScene } from "./Scene";
 
 
 type Props = {
@@ -10,15 +11,18 @@ type Props = {
 
 
 export default function Animation(props: Props){
+    const sceneInfo = useParentScene();
+
+    if(!sceneInfo){
+        console.warn("Animations must be used inside a Scene");
+        return <>{props.children(() => 1)}</>
+    }
 
     const { getElapsed } = useComposition()!;
-    let animationStart : number | null = null;
+    let animationStart = sceneInfo.start;
 
     const val = () => {
         const elapsed = getElapsed();
-        if(animationStart === null){
-            animationStart = elapsed;
-        }
         const animationEnd = animationStart + props.duration;
         const animationElapsed = (
             elapsed > animationEnd
